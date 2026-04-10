@@ -272,13 +272,28 @@ Only include sections relevant to detected project type.
 - Static files in `priv/static/` take priority over controller routes
 ```
 
-### Step 6: Install skills
+### Step 6: Install official plugins
 
-Copy the implementation workflow skills to `.claude/skills/` in the project. These are the skills that make the full AI-assisted development pipeline work.
+Install these plugins from the official Claude Code marketplace (`claude-plugins-official`). These provide high-quality, maintained skills:
 
-Create `.claude/skills/` directory if missing, then create each skill as a `SKILL.md` file. The source of truth for skill content is the adplatform project at `/home/bhf-ai-devel/Projects/adplatform/.claude/skills/`. Copy these skills:
+1. **`frontend-design`** — distinctive, production-grade UI generation (LiveView, Tailwind)
+2. **`skill-creator`** — create/modify/benchmark skills
 
-**Implementation pipeline skills** (copy from adplatform):
+To install, run in the Claude Code session:
+```
+/install-plugin frontend-design
+/install-plugin skill-creator
+```
+
+If `/install-plugin` is not available, the user should install them manually via the Claude Code plugin manager.
+
+### Step 7: Install implementation pipeline skills
+
+Copy the implementation workflow skills to `.claude/skills/` in the project. These skills create the full AI-assisted development pipeline.
+
+Create `.claude/skills/` directory if missing, then create each skill as a `SKILL.md` file. The source of truth is the adplatform project at `/home/bhf-ai-devel/Projects/adplatform/.claude/skills/`. Copy these:
+
+**Implementation pipeline skills**:
 - `prd-generator` — generates PRD from human project plan
 - `implementation-plan` — breaks PRD into phased tasks
 - `code-execute` — executes tasks from implementation plan
@@ -288,26 +303,15 @@ Create `.claude/skills/` directory if missing, then create each skill as a `SKIL
 - `code-complete` — mark tasks done in tasks.md
 - `compound` — capture lessons learned after each phase
 
-**Design & planning skills** (copy from adplatform):
+**Other skills**:
 - `grill-me` — stress-test plans via relentless questioning
-- `frontend-design` — high-quality LiveView UI generation
 - `coolify-deploy` — deploy Phoenix to Coolify
-
-**Meta skills** (copy from adplatform):
-- `skill-creator` — create/modify skills
 
 Also create `.claude/agents/meta-agent.md` for the Meta Agent subagent (generates new subagents).
 
 **How to copy**: Read each SKILL.md from the adplatform project and write it to the new project. If adplatform is not available at the expected path, ask the user where their reference project is.
 
-Also create the `.agents/skills/` directory with symlinks:
-```
-.agents/skills/frontend-design -> ../../.claude/skills/frontend-design  
-.agents/skills/grill-me -> ../../.claude/skills/grill-me
-.agents/skills/skill-creator -> ../../.claude/skills/skill-creator
-```
-
-### Step 7: Add workflow documentation to CLAUDE.md
+### Step 8: Add workflow documentation to CLAUDE.md
 
 Append the implementation workflow to CLAUDE.md so the agent knows the full pipeline:
 
@@ -339,19 +343,19 @@ Review reports live in `docs/reviews/`.
 - Check outdated: `mix hex.outdated`
 ```
 
-### Step 8: Install everything
+### Step 9: Install everything
 
 Run in sequence:
 1. `mix deps.get`
 2. `mix claude.install --yes`
 3. `mix compile`
 
-### Step 9: Fetch Ash guidance (if Ash project)
+### Step 10: Fetch Ash guidance (if Ash project)
 
 Fetch the Ash Framework guidance index for up-to-date docs:
 - URL: https://raw.githubusercontent.com/bradleygolden/ash_vibez/main/llms.txt
 
-### Step 10: Run initial scan and report
+### Step 11: Run initial scan and report
 
 Run `mix credo --strict` and (if Phoenix) `mix sobelow --skip -q`.
 
@@ -365,7 +369,7 @@ Report summary:
 
 Ask the user if they want to auto-fix credo issues now.
 
-### Step 11: Final summary
+### Step 12: Final summary
 
 Print a checklist of everything installed:
 

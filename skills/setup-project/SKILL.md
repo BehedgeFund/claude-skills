@@ -349,7 +349,30 @@ Report:
 
 Ask if user wants to auto-fix.
 
-### Step 11: Summary
+### Step 11: Suggest dependency monitoring (optional)
+
+Ask the user if they want to set up automatic weekly dependency monitoring via `/schedule`. Explain:
+
+- Runs every Monday morning as a **remote agent** (cloud, works even when computer is off)
+- Only **reports** outdated deps — never installs or updates anything
+- Requires GitHub repo connected to Claude Code (`/web-setup`)
+- Results appear in claude.ai/code session list
+
+If they want it, guide them:
+1. Run `/web-setup` to connect GitHub (if not already done)
+2. Then use `/schedule` to create the trigger with this prompt:
+
+```
+Run `mix hex.outdated` in this project. Report a table with columns:
+dep name | current version | latest version | bump type (major/minor/patch).
+Flag any major version bumps as BREAKING.
+Do NOT run `mix deps.update` — only report, never install.
+If everything is up to date, say so.
+```
+
+If they decline, skip — this is informational, not mandatory.
+
+### Step 12: Summary
 
 ```
 Setup complete:
@@ -362,6 +385,7 @@ Setup complete:
   [x] Implementation pipeline skills (N skills)
   [x] ash-vibez guidance                              # if Ash
   [x] Initial scan: N credo, M sobelow issues
+  [ ] Deps monitoring (optional, needs GitHub connection)
 
 Available commands:
   /prd-generator    — create PRD from project plan

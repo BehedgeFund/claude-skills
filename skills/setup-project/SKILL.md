@@ -1,41 +1,69 @@
 ---
 name: setup-project
-description: Full bootstrap for Elixir/Phoenix/Ash projects. Installs quality tools (credo, sobelow), Claude Code integration (hooks, skills, MCP), writes Ash/LiveView/Oban conventions to CLAUDE.md, fetches ash-vibez, and runs initial scan. One command to make any project AI-ready. Use on new or existing projects.
+description: Full bootstrap for Elixir/Phoenix/Ash projects. Installs Elixir marketplace plugin (auto format/compile/credo/sobelow/ash.codegen hooks), quality tools, Claude Code integration, writes conventions to CLAUDE.md, copies implementation pipeline skills. One command to make any project AI-ready.
 ---
 
 # Full Project Bootstrap for Elixir/Phoenix/Ash
 
-You are a project bootstrapper. One command sets up EVERYTHING an AI agent needs to write quality code on this project: tools, hooks, conventions, patterns.
+One command sets up EVERYTHING: plugins, tools, hooks, conventions, skills, workflow.
 
 ## What you install
 
-1. **Quality tools** — credo (linter), sobelow (security scanner)
-2. **Claude Code integration** — `claude` hex package, tidewave MCP, usage_rules
-3. **Hooks** — credo per-file after edit (~0.04s), sobelow on stop (~1.3s), compile, format
-4. **`.credo.exs`** — tuned for Ash/Phoenix/LiveView (no noise)
-5. **Conventions in CLAUDE.md** — Ash patterns, LiveView component rules, Oban pitfalls, common traps
-6. **Ash guidance** — fetch ash-vibez for up-to-date Ash documentation
+1. **Elixir marketplace plugin** — `bradleygolden/claude-marketplace-elixir` with `elixir` + `ash` plugins (auto format, compile, credo, sobelow, ash.codegen hooks per edit)
+2. **Quality tools** — credo, sobelow as mix deps + tuned `.credo.exs`
+3. **Claude Code integration** — `claude` hex package, tidewave MCP, usage_rules
+4. **Official plugins** — `frontend-design`, `skill-creator` from Anthropic marketplace
+5. **Conventions in CLAUDE.md** — Ash, LiveView, LiveComponent, Oban patterns
+6. **Implementation pipeline skills** — prd-generator, autopilot, code-review, compound, etc.
 7. **Initial scan** — baseline report + offer to auto-fix
 
-## Step-by-step procedure
+## Procedure
 
 ### Step 1: Detect project type
 
-Read `mix.exs` to determine:
-- Is this an Elixir project? (required)
-- Is Phoenix present? (for sobelow + LiveView conventions)
-- Is Ash Framework present? (for Ash conventions + ModuleDoc tuning)
-- Is Oban present? (for Oban worker conventions)
-- What's already installed? (skip what exists)
+Read `mix.exs`. Determine:
+- Is Phoenix present? (sobelow + LiveView conventions)
+- Is Ash Framework present? (Ash conventions + Ash plugin + ModuleDoc tuning)
+- Is Oban present? (Oban conventions)
+- What's already installed?
 
-Report what you found and what you'll install.
+Report findings.
 
-### Step 2: Add dependencies to `mix.exs`
+### Step 2: Add Elixir marketplace plugin
 
-Add missing deps to the `deps` function:
+This is the core — provides automatic hooks for format, compile, credo, sobelow, ash.codegen on every file edit.
+
+```
+/plugin marketplace add bradleygolden/claude-marketplace-elixir
+```
+
+Then install plugins based on detected stack:
+
+```
+/plugin install elixir@elixir
+```
+
+If Ash detected:
+```
+/plugin install elixir@ash
+```
+
+These plugins provide PostToolUse hooks that automatically run on every `.ex`/`.exs` edit:
+- `mix format` (file)
+- `mix compile --warnings-as-errors`
+- `mix credo suggest` (if credo dep present)
+- `mix sobelow` (if sobelow dep present)
+- `mix ash.codegen --check` (if ash dep present)
+- `mix hex.audit` (on mix.exs edits)
+
+And PreToolUse hooks for pre-commit checks.
+
+### Step 3: Add dependencies to `mix.exs`
+
+Add missing deps (the plugins need these to run their checks):
 
 ```elixir
-# Quality tools
+# Quality tools (needed by elixir plugin hooks)
 {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
 {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},  # only if Phoenix
 
@@ -45,18 +73,20 @@ Add missing deps to the `deps` function:
 {:usage_rules, "~> 0.1", only: [:dev]},
 ```
 
-Skip any already present. Keep alphabetical order.
+Skip already present. Use `mix igniter.install` when Igniter is available.
 
-### Step 3: Create `.credo.exs`
+### Step 4: Create `.credo.exs`
 
-Create `.credo.exs` in project root. Key tuning:
+Create tuned `.credo.exs` in project root:
 - **Only scan `lib/`** — tests don't need style enforcement
-- **ModuleDoc disabled** if Ash project (Ash resources have own conventions), **enabled** otherwise
-- **Cyclomatic complexity max: 13** — LiveView handle_event naturally has more branches
-- **Function arity max: 8** — polling/recursive functions need more params
+- **ModuleDoc disabled** if Ash (resources have own conventions), **enabled** otherwise
+- **Cyclomatic complexity max: 13** — LiveView handle_event has more branches
+- **Function arity max: 8** — polling/recursive functions
 - **Nesting max: 3** — `with` + `case` in workers is normal
-- **TODO exit_status: 0** — TODOs should not block the agent
-- **AliasUsage threshold: called > 1** — alias required only from 2 uses
+- **TODO exit_status: 0** — don't block the agent
+- **AliasUsage threshold: > 1** — alias from 2 uses
+
+Full `.credo.exs` config:
 
 ```elixir
 %{
@@ -190,25 +220,25 @@ Create `.credo.exs` in project root. Key tuning:
 }
 ```
 
-### Step 4: Configure hooks in `.claude.exs`
+### Step 5: Install and configure Claude Code integration
 
-Read existing `.claude.exs`. If missing, create one. **MERGE** (never replace) these hooks:
+Run in sequence:
+1. `mix deps.get`
+2. `mix claude.install --yes` — creates `.claude.exs` with compile/format hooks, installs commands (mix:*, claude:*, elixir:*, memory:*), tidewave MCP, usage_rules sync, meta-agent subagent
+3. `mix compile`
 
-- `post_tool_use`: add `{"credo --strict {{tool_input.file_path}}", when: [:write, :edit, :multi_edit]}`
-- `stop`: add `{"sobelow --skip -q", blocking?: false}` (only if Phoenix)
-- `subagent_stop`: add `{"sobelow --skip -q", blocking?: false}` (only if Phoenix)
+### Step 6: Install official Anthropic plugins
 
-Keep ALL existing hooks. Only ADD new entries.
+```
+/install-plugin frontend-design
+/install-plugin skill-creator
+```
 
-### Step 5: Write conventions to CLAUDE.md
+### Step 7: Write conventions to CLAUDE.md
 
-**IMPORTANT**: Read existing `CLAUDE.md` first. If it has a `## Conventions` section, merge into it. If no CLAUDE.md exists, create one. Never overwrite existing content.
+Read existing `CLAUDE.md`. MERGE (never overwrite) a `## Conventions` section. Adapt module names to match the project (find in `lib/*_web.ex`). Only include sections for detected deps.
 
-Adapt the `AppWeb` module name to match the actual project (find it in `lib/*_web.ex`).
-
-Only include sections relevant to detected project type.
-
-#### Ash Framework conventions (if Ash detected):
+#### If Ash detected, add:
 
 ```markdown
 ## Conventions
@@ -230,7 +260,7 @@ Only include sections relevant to detected project type.
 - `AshPhoenix.Form` — store raw form in assigns, call `to_form` only in render
 ```
 
-#### LiveView conventions (if Phoenix detected):
+#### If Phoenix detected, add:
 
 ```markdown
 ### LiveView Components
@@ -248,14 +278,14 @@ Only include sections relevant to detected project type.
 ### LiveView Patterns
 - LiveView streams don't expose `.inserts` for emptiness checks — track count separately in assigns
 - Workers (Oban) use `authorize?: false`, but LiveView `handle_event` ALWAYS uses `actor: socket.assigns.current_user`
-- For PubSub subscriptions affected by URL params, subscribe in `handle_params/3` not `mount/3` — avoids double subscriptions
+- For PubSub subscriptions affected by URL params, subscribe in `handle_params/3` not `mount/3`
 - When subscribing to PubSub, verify ALL message types have matching `handle_info` clauses
-- Never use `String.to_integer` on LiveView form params — always `Integer.parse/1` with error handling
-- `String.to_existing_atom` in handle_event crashes on unknown atoms — use explicit pattern match whitelist
-- `embed_templates "layouts/*"` auto-generates functions from .heex files — do not define them manually
+- Never use `String.to_integer` on LiveView form params — always `Integer.parse/1`
+- `String.to_existing_atom` in handle_event crashes — use explicit pattern match whitelist
+- `embed_templates "layouts/*"` auto-generates functions — do not define them manually
 ```
 
-#### Oban conventions (if Oban detected):
+#### If Oban detected, add:
 
 ```markdown
 ### Oban Workers
@@ -264,102 +294,52 @@ Only include sections relevant to detected project type.
 - Workers that create + update multiple records MUST wrap in `Repo.transaction` + use `unique: [period: 300, keys: [:key]]`
 ```
 
-#### Always include:
+#### Always add:
 
 ```markdown
 ### Config
 - `runtime.exs` runs after `dev.exs` and overwrites same config keys — keep dev-specific config in `dev.exs` only
 - Static files in `priv/static/` take priority over controller routes
-```
-
-### Step 6: Install official plugins
-
-Install these plugins from the official Claude Code marketplace (`claude-plugins-official`). These provide high-quality, maintained skills:
-
-1. **`frontend-design`** — distinctive, production-grade UI generation (LiveView, Tailwind)
-2. **`skill-creator`** — create/modify/benchmark skills
-
-To install, run in the Claude Code session:
-```
-/install-plugin frontend-design
-/install-plugin skill-creator
-```
-
-If `/install-plugin` is not available, the user should install them manually via the Claude Code plugin manager.
-
-### Step 7: Install implementation pipeline skills
-
-Copy the implementation workflow skills to `.claude/skills/` in the project. These skills create the full AI-assisted development pipeline.
-
-Create `.claude/skills/` directory if missing, then create each skill as a `SKILL.md` file. The source of truth is the adplatform project at `/home/bhf-ai-devel/Projects/adplatform/.claude/skills/`. Copy these:
-
-**Implementation pipeline skills**:
-- `prd-generator` — generates PRD from human project plan
-- `implementation-plan` — breaks PRD into phased tasks
-- `code-execute` — executes tasks from implementation plan
-- `autopilot` — full autonomous execution: tasks + review + fix + commit
-- `code-review` — parallel review (Security, Performance, Architecture, Logic)
-- `code-fix` — auto-fix issues from code-review reports
-- `code-complete` — mark tasks done in tasks.md
-- `compound` — capture lessons learned after each phase
-
-**Other skills**:
-- `grill-me` — stress-test plans via relentless questioning
-- `coolify-deploy` — deploy Phoenix to Coolify
-
-Also create `.claude/agents/meta-agent.md` for the Meta Agent subagent (generates new subagents).
-
-**How to copy**: Read each SKILL.md from the adplatform project and write it to the new project. If adplatform is not available at the expected path, ask the user where their reference project is.
-
-### Step 8: Add workflow documentation to CLAUDE.md
-
-Append the implementation workflow to CLAUDE.md so the agent knows the full pipeline:
-
-```markdown
-### Implementation Workflow
-
-The project uses a structured AI-assisted development pipeline:
-
-1. **`/prd-generator`** — write a human project plan, get a technical PRD
-2. **`/grill-me`** — stress-test the PRD with relentless questions
-3. **`/implementation-plan`** — break PRD into phased tasks (tasks.md)
-4. **`/code-execute phase:N`** — execute tasks from a specific phase
-5. **`/autopilot`** — full autonomous: execute + review + fix + commit per phase
-6. **`/code-review`** — parallel review across 4 dimensions
-7. **`/code-fix`** — auto-fix blocking/important issues from review
-8. **`/compound`** — capture lessons learned after each phase (updates CLAUDE.md)
-9. **`/code-complete`** — mark tasks done in tasks.md
-
-Implementation artifacts live in `docs/implementation/`:
-- `prd.md` — Product Requirements Document
-- `tasks.md` — phased task list with checkboxes
-- `context.md` — progress notes and context
-
-Review reports live in `docs/reviews/`.
 
 ### Dependency Management
-- Use Igniter when available: `mix igniter.install <package>` — handles config, migrations, code generation
+- Use Igniter when available: `mix igniter.install <package>`
 - For manual deps: add to `mix.exs`, run `mix deps.get`
-- Check outdated: `mix hex.outdated`
+
+### Implementation Workflow
+1. **`/prd-generator`** — write a human project plan, get a technical PRD
+2. **`/grill-me`** — stress-test the PRD
+3. **`/implementation-plan`** — break PRD into phased tasks (tasks.md)
+4. **`/code-execute phase:N`** — execute tasks from a phase
+5. **`/autopilot`** — full autonomous: execute + review + fix + commit
+6. **`/code-review`** — parallel review across 4 dimensions
+7. **`/code-fix`** — auto-fix blocking/important issues
+8. **`/compound`** — capture lessons learned (updates CLAUDE.md)
+9. **`/code-complete`** — mark tasks done in tasks.md
+
+Implementation artifacts: `docs/implementation/` (prd.md, tasks.md, context.md).
+Review reports: `docs/reviews/`.
 ```
 
-### Step 9: Install everything
+### Step 8: Copy implementation pipeline skills
 
-Run in sequence:
-1. `mix deps.get`
-2. `mix claude.install --yes`
-3. `mix compile`
+Copy skills to `.claude/skills/` from the reference project (`/home/bhf-ai-devel/Projects/adplatform/.claude/skills/`). If not available, ask the user for the path.
 
-### Step 10: Fetch Ash guidance (if Ash project)
+Skills to copy:
+- `prd-generator`, `implementation-plan`, `code-execute`, `autopilot`
+- `code-review`, `code-fix`, `code-complete`, `compound`
+- `grill-me`, `coolify-deploy`
 
-Fetch the Ash Framework guidance index for up-to-date docs:
-- URL: https://raw.githubusercontent.com/bradleygolden/ash_vibez/main/llms.txt
+Also create `.claude/agents/meta-agent.md`.
 
-### Step 11: Run initial scan and report
+### Step 9: Fetch Ash guidance (if Ash)
 
-Run `mix credo --strict` and (if Phoenix) `mix sobelow --skip -q`.
+Fetch: https://raw.githubusercontent.com/bradleygolden/ash_vibez/main/llms.txt
 
-Report summary:
+### Step 10: Run initial scan
+
+Run `mix credo --strict` and `mix sobelow --skip -q`.
+
+Report:
 ```
 | Tool    | Issues | Breakdown                        |
 |---------|--------|----------------------------------|
@@ -367,23 +347,21 @@ Report summary:
 | Sobelow | M      | X high, Y low confidence         |
 ```
 
-Ask the user if they want to auto-fix credo issues now.
+Ask if user wants to auto-fix.
 
-### Step 12: Final summary
-
-Print a checklist of everything installed:
+### Step 11: Summary
 
 ```
 Setup complete:
-  [x] credo + sobelow (quality tools)
-  [x] .credo.exs (tuned config)
-  [x] Claude Code hooks (credo per-file, sobelow on stop)
-  [x] tidewave MCP + usage_rules
-  [x] Conventions in CLAUDE.md (Ash/LiveView/Oban/Config)
-  [x] Implementation workflow in CLAUDE.md
-  [x] Skills installed (N skills)
-  [x] ash-vibez fetched (if Ash)
-  [x] Initial scan: N credo issues, M sobelow issues
+  [x] Elixir marketplace plugin (format/compile/credo/sobelow/ash.codegen hooks)
+  [x] Ash plugin (ash.codegen --check hook)          # if Ash
+  [x] credo + sobelow deps + .credo.exs
+  [x] Claude Code (tidewave, usage_rules, commands)
+  [x] Official plugins (frontend-design, skill-creator)
+  [x] Conventions in CLAUDE.md
+  [x] Implementation pipeline skills (N skills)
+  [x] ash-vibez guidance                              # if Ash
+  [x] Initial scan: N credo, M sobelow issues
 
 Available commands:
   /prd-generator    — create PRD from project plan
@@ -393,16 +371,14 @@ Available commands:
   /code-fix         — auto-fix review issues
   /grill-me         — stress-test a design
   /compound         — capture lessons learned
+  /frontend-design  — high-quality UI generation
 ```
 
-## Important rules
+## Rules
 
-- NEVER remove existing hooks, config, or CLAUDE.md content — only ADD/MERGE
-- If `.claude.exs` doesn't exist and `claude` package is not available, skip hooks and just install credo+sobelow
-- For non-Phoenix projects, skip sobelow and LiveView sections
-- For non-Ash projects, keep ModuleDoc enabled and skip Ash section
-- For non-Oban projects, skip Oban section
-- Always `mix format` after creating config files
-- Adapt AppWeb/AppComponents names to match the actual project module names
-- When copying skills, read each SKILL.md fully before writing to ensure exact copy
-- If Igniter is available (`{:igniter, ...}` in deps), prefer `mix igniter.install` for adding new packages
+- NEVER remove existing config or CLAUDE.md content — only ADD/MERGE
+- For non-Phoenix projects: skip sobelow, LiveView sections
+- For non-Ash projects: keep ModuleDoc enabled, skip Ash sections, skip Ash plugin
+- For non-Oban projects: skip Oban section
+- Adapt AppWeb/AppComponents names to match actual project
+- If Igniter available, prefer `mix igniter.install` for deps

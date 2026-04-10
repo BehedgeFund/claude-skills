@@ -1,6 +1,7 @@
 # Claude Code Skills for Elixir/Phoenix/Ash
 
 Global skills for AI-assisted Elixir development with Claude Code.
+One install, one command — full project setup on any machine.
 
 ## Quick Install
 
@@ -18,43 +19,85 @@ irm https://raw.githubusercontent.com/BehedgeFund/claude-skills/main/install.ps1
 ```bash
 git clone https://github.com/BehedgeFund/claude-skills.git
 cd claude-skills
-# Linux/macOS:
-./install.sh
-# Windows:
-.\install.ps1
+./install.sh        # Linux/macOS
+.\install.ps1       # Windows
 ```
 
-## What you get
+This installs global skills to `~/.claude/skills/`. They become available in every Claude Code session.
 
-### `/setup-project`
-Full project bootstrap. Run once on any Elixir/Phoenix/Ash project:
-- Installs credo + sobelow with Claude Code hooks
-- Creates tuned `.credo.exs` for Ash/Phoenix/LiveView
-- Writes conventions to CLAUDE.md (Ash, LiveView, LiveComponent, Oban patterns)
-- Copies implementation pipeline skills to the project
-- Fetches ash-vibez guidance
-- Runs initial scan
+---
 
-### `/ash-vibez`
-Fetches up-to-date Ash Framework patterns and documentation.
-
-## Usage
+## Usage: Existing Project
 
 ```bash
-cd ~/Projects/my-elixir-project
+cd ~/Projects/my-existing-project
 claude
 > /setup-project
 ```
 
-This installs per-project skills including:
-- `/prd-generator` - create PRD from project plan
-- `/implementation-plan` - break PRD into phased tasks  
-- `/autopilot` - autonomous execution + review + fix + commit
-- `/code-review` - parallel review (Security, Performance, Architecture, Logic)
-- `/code-fix` - auto-fix review issues
-- `/compound` - capture lessons learned
-- `/grill-me` - stress-test designs
+The skill detects your stack (Phoenix? Ash? Oban?) and installs only what's missing.
+
+## Usage: New Project
+
+```bash
+mix phx.new my_app
+cd my_app
+claude
+> /setup-project
+```
+
+---
+
+## What `/setup-project` Does
+
+| Step | What | Details |
+|------|------|---------|
+| 1 | **Detect stack** | Reads mix.exs for Phoenix, Ash, Oban |
+| 2 | **Elixir marketplace plugin** | `bradleygolden/claude-marketplace-elixir` — auto hooks for format, compile, credo, sobelow, ash.codegen on every edit |
+| 3 | **Add deps** | credo, sobelow, claude, tidewave, usage_rules |
+| 4 | **Create `.credo.exs`** | Tuned for Ash/Phoenix/LiveView (no noise) |
+| 5 | **`mix claude.install`** | Hooks, commands (mix:*, claude:*, elixir:*, memory:*), tidewave MCP, meta-agent |
+| 6 | **Official plugins** | `frontend-design` + `skill-creator` from Anthropic marketplace |
+| 7 | **Conventions to CLAUDE.md** | Ash policies, LiveComponent rules, Oban patterns, config traps |
+| 8 | **Implementation pipeline skills** | prd-generator, autopilot, code-review, compound, etc. |
+| 9 | **Ash guidance** | Fetches ash-vibez docs (if Ash) |
+| 10 | **Initial scan** | Credo + sobelow baseline + offer to auto-fix |
+
+## Available Commands After Setup
+
+### Implementation Pipeline
+```
+/prd-generator          — write project plan, get technical PRD
+/grill-me               — stress-test a plan with relentless questions
+/implementation-plan    — break PRD into phased tasks
+/code-execute phase:N   — execute tasks from a phase
+/autopilot              — full autonomous: execute + review + fix + commit
+/code-review            — parallel review (Security, Performance, Architecture, Logic)
+/code-fix               — auto-fix blocking/important issues
+/compound               — capture lessons learned after each phase
+/code-complete          — mark tasks done
+```
+
+### Design & Tools
+```
+/frontend-design        — high-quality LiveView UI
+/ash-vibez              — Ash Framework guidance
+/coolify-deploy         — deploy Phoenix to Coolify
+```
+
+### Project Management
+```
+/mix:deps               — dependency management
+/mix:deps-check         — check outdated deps
+/elixir:upgrade         — Elixir/OTP upgrade assistant
+/claude:status          — check Claude Code config
+```
 
 ## Updating
 
-Re-run the install command to update all skills to latest version.
+Re-run the install command to update global skills:
+```bash
+curl -fsSL https://raw.githubusercontent.com/BehedgeFund/claude-skills/main/install.sh | bash
+```
+
+Then in each project run `/setup-project` again to update per-project skills.
